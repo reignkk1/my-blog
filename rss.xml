@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Dev's RSS Feed]]></title><description><![CDATA[MinGyeom's Blog]]></description><link>https://gatsby-starter-apple.netlify.app</link><generator>GatsbyJS</generator><lastBuildDate>Sun, 13 Jul 2025 14:59:31 GMT</lastBuildDate><item><title><![CDATA[styled-components의 함정과 최적화]]></title><description><![CDATA[음악 플레이어를 만들면서 사용자 경험을 더 향상시키기 위해 재생바(progress bar)가 부드럽고 자연스럽게 움직이도록 구현하고자 했습니다.
+이를 위해 음악의 현재 재생 시간을 소수점 단위(예: 12.3532초, 12.421…]]></description><link>https://gatsby-starter-apple.netlify.app/blog/styled-components의 함정과 최적화 이야기/</link><guid isPermaLink="false">https://gatsby-starter-apple.netlify.app/blog/styled-components의 함정과 최적화 이야기/</guid><pubDate>Sun, 06 Jul 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;음악 플레이어를 만들면서 사용자 경험을 더 향상시키기 위해 재생바(progress bar)가 부드럽고 자연스럽게 움직이도록 구현하고자 했습니다.
+이를 위해 음악의 현재 재생 시간을 소수점 단위(예: 12.3532초, 12.4212초...)로 실시간 추적하고 이 값을 기반으로 재생바의 &lt;code&gt;background&lt;/code&gt;색상이 점진적으로 채워지게 만들었습니다.&lt;/p&gt;
+&lt;br&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 12.269938650306749%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAACCAYAAABYBvyLAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAbklEQVR42j3IWw6DIBRFUQdRFS4PJSA0lAQ7/8Htiib9WDmPafUbkhN72PCbx5ZE7I3988bHeH0BOTy1HXzPkxACOWdqrbdSCq01eu+klJi01iyimbX6e60L8zC2XJRCicE5h4hgzNOH0Qdr7Z0/YHs2hRH7+v8AAAAASUVORK5CYII=&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;code&quot; title=&quot;&quot; src=&quot;/static/92c5236466971ad7ef6c34b931bd32fd/a6d36/code.png&quot; srcset=&quot;/static/92c5236466971ad7ef6c34b931bd32fd/222b7/code.png 163w,
+/static/92c5236466971ad7ef6c34b931bd32fd/ff46a/code.png 325w,
+/static/92c5236466971ad7ef6c34b931bd32fd/a6d36/code.png 650w,
+/static/92c5236466971ad7ef6c34b931bd32fd/c67d4/code.png 723w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;p&gt;위 코드처럼 &lt;code&gt;props.progress&lt;/code&gt; 값을 사용해 &lt;code&gt;linear-gradient&lt;/code&gt;의 퍼센트 위치를 동적으로 설정하면 재생 시간이 증가함에 따라 재생바의 색상이 자연스럽게 채워지는 시각 효과를 낼 수 있습니다.&lt;/p&gt;
+&lt;p&gt;처음에는 모든 게 정상적으로 작동하는 것처럼 보였지만 음악을 조금만 재생해보니 재생바가 간헐적으로 끊기며 뚝뚝 끊어지는 현상이 발생했습니다.&lt;/p&gt;
+&lt;br&gt;
+&lt;img style=&quot;display: block; margin: 0 auto;&quot; src=&quot;/c327f7ad1da7e4022078a3778656818e/Animation.gif&quot;&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;p&gt;문제를 추적해본 결과 &apos;styled-components&apos;의 클래스 생성 방식 때문이었습니다.&lt;/p&gt;
+&lt;h2&gt;문제의 원인: 클래스 네임 생성 &amp;#x26; 캐싱 누적&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;styled-components&lt;/code&gt;는 &lt;code&gt;props&lt;/code&gt;가 변경될 때마다 내부적으로 새로운 CSS 클래스 네임을 생성하고, 해당 스타일을 메모리에 캐싱하는 방식으로 동작합니다.&lt;/p&gt;
+&lt;p&gt;그런데 재생바에 사용된 &lt;code&gt;progress&lt;/code&gt; 값은 음악 재생 중 실시간으로 그것도 소수점 단위까지 끊임없이 변하는 값입니다.&lt;/p&gt;
+&lt;p&gt;즉 재생이 진행되는 매 순간마다 &lt;code&gt;props&lt;/code&gt;가 갱신되며 그에 따라 &lt;code&gt;styled-components&lt;/code&gt;는 매번 새로운 클래스 네임을 생성하고 저장합니다.&lt;/p&gt;
+&lt;br&gt;
+&lt;img style=&quot;display: block; margin: 0 auto;&quot; src=&quot;/81fc3ff837258ad81d4c81dff54ed4db/html_1.gif&quot;&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;p&gt;이러한 과정이 반복되면서 렌더링 시 브라우저가 처리해야 할 클래스가 점점 많아지고 결국에는 렌더링 병목이 발생해 재생바가 끊기는 현상으로 이어졌습니다.&lt;/p&gt;
+&lt;h2&gt;해결 방법: 인라인 스타일로 전환&lt;/h2&gt;
+&lt;p&gt;이 문제를 해결하기 위해 저는 styled-components 대신 인라인 스타일 방식을 선택했습니다.&lt;/p&gt;
+&lt;p&gt;인라인 스타일은 별도의 클래스를 생성하거나 캐시하지 않고 해당 DOM 요소의 style 속성에 직접 값을 적용하기 때문에 렌더링 비용이 훨씬 적습니다.&lt;/p&gt;
+&lt;br&gt;
+&lt;img style=&quot;display: block; margin: 0 auto;&quot; src=&quot;/437b7a15c12c60e0ac7aa699126abbeb/animation_2.gif&quot;&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;p&gt;위 GIF에서 볼 수 있듯이 기존에는 클래스가 계속 바뀌면서 렌더링이 끊기던 재생바가
+인라인 스타일로 바꾼 후에는 부드럽게 자연스럽게 동작하는 모습을 확인할 수 있습니다.&lt;/p&gt;
+&lt;br&gt;
+&lt;img style=&quot;display: block; margin: 0 auto;&quot; src=&quot;/084fb554cd6dd9b780bb6a686a3aaaa3/html_2.gif&quot;&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;p&gt;인라인 스타일은 단순히 값을 바로 바꿔주는 방식이라 매번 새로운 클래스 생성이나 캐시 관리 작업이 필요하지 않기 때문에 성능적으로 매우 효율적입니다. 특히 프레임 단위로 props가 바뀌는 UI에 적합합니다.&lt;/p&gt;
+&lt;h2&gt;결론: 언제 styled-components를 피해야 할까?&lt;/h2&gt;
+&lt;p&gt;실시간으로 값이 자주 그리고 미세하게 변하는 UI에서는 styled-components의 클래스 생성 방식이 오히려 성능 저하의 원인이 될 수 있습니다. 이런 경우에는 인라인 스타일이 훨씬 가볍고 효율적인 대안이 됩니다.&lt;/p&gt;
+&lt;p&gt;styled-components는 강력하고 선언적인 CSS-in-JS 도구이지만 모든 상황에서 최선의 선택은 아니라는 것을 이 경험을 통해 체감하게 되었습니다.&lt;/p&gt;
+&lt;style class=&quot;grvsc-styles&quot;&gt;
+  .grvsc-container {
+    overflow: auto;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+    padding-top: 1rem;
+    padding-top: var(--grvsc-padding-top, var(--grvsc-padding-v, 1rem));
+    padding-bottom: 1rem;
+    padding-bottom: var(--grvsc-padding-bottom, var(--grvsc-padding-v, 1rem));
+    border-radius: 8px;
+    border-radius: var(--grvsc-border-radius, 8px);
+    font-feature-settings: normal;
+    line-height: 1.4;
+  }
+  
+  .grvsc-code {
+    display: table;
+  }
+  
+  .grvsc-line {
+    display: table-row;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+  }
+  
+  .grvsc-line &gt; * {
+    position: relative;
+  }
+  
+  .grvsc-gutter-pad {
+    display: table-cell;
+    padding-left: 0.75rem;
+    padding-left: calc(var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem)) / 2);
+  }
+  
+  .grvsc-gutter {
+    display: table-cell;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  .grvsc-gutter::before {
+    content: attr(data-content);
+  }
+  
+  .grvsc-source {
+    display: table-cell;
+    padding-left: 1.5rem;
+    padding-left: var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem));
+    padding-right: 1.5rem;
+    padding-right: var(--grvsc-padding-right, var(--grvsc-padding-h, 1.5rem));
+  }
+  
+  .grvsc-source:empty::after {
+    content: &apos; &apos;;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  .grvsc-gutter + .grvsc-source {
+    padding-left: 0.75rem;
+    padding-left: calc(var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem)) / 2);
+  }
+  
+  /* Line transformer styles */
+  
+  .grvsc-has-line-highlighting &gt; .grvsc-code &gt; .grvsc-line::before {
+    content: &apos; &apos;;
+    position: absolute;
+    width: 100%;
+  }
+  
+  .grvsc-line-diff-add::before {
+    background-color: var(--grvsc-line-diff-add-background-color, rgba(0, 255, 60, 0.2));
+  }
+  
+  .grvsc-line-diff-del::before {
+    background-color: var(--grvsc-line-diff-del-background-color, rgba(255, 0, 20, 0.2));
+  }
+  
+  .grvsc-line-number {
+    padding: 0 2px;
+    text-align: right;
+    opacity: 0.7;
+  }
+  
+&lt;/style&gt;</content:encoded></item><item><title><![CDATA[React.js의 렌더링 방식]]></title><description><![CDATA[React.js의 렌더링 프로세스는 어떠한 방식으로 작동하는지? 또한 이러한 특징으로 인해 얻게 되는 장점이 무엇인지 살펴보겠습니다. React.js…]]></description><link>https://gatsby-starter-apple.netlify.app/blog/react-render/</link><guid isPermaLink="false">https://gatsby-starter-apple.netlify.app/blog/react-render/</guid><pubDate>Sun, 11 May 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;React.js의 렌더링 프로세스는 어떠한 방식으로 작동하는지? 또한 이러한 특징으로 인해 얻게 되는 장점이 무엇인지 살펴보겠습니다.&lt;/p&gt;
+&lt;p&gt;React.js의 렌더링 방식에 대해서 살펴보기 전에 브라우저의 렌더링 과정에 대해서 살펴볼 필요가 있습니다.&lt;/p&gt;
+&lt;h2&gt;브라우저의 렌더링 방식&lt;/h2&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.852760736196316%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAYAAAC0VX7mAAAACXBIWXMAABJ0AAASdAHeZh94AAABFElEQVR42rWSS0oDQRCG5/1+72Yxd5r13EBndOMBshEvIOQCQtx6AImLEQmRJGRnILOUZCF4AeU3VTLQTkYYBBt+qK6q/upvuiVJktBKlmWI+64URelVp0/CUNFhXdehqSpLVbV+ICU9z0MQBLBt+0dT69p1HExub7BcrTBbr/H4PMfTbI7r8fgYqB6mxXGMLMsYrGkaFy3L4hrFYRiiaRrQ+nzd4WP/xnFd193h38Aoihjq+z6DyKnrunAOzkzTRJIk2LxsGHJ5NcLibsTxdPrQD6TrpmnKoNaheGWqb5stQ+53S+zfF787pIAgBBZhogzDQFEUKMsSF+UZTk/OUVUV8jz/+ysP1PBm+jLkVBTl/tXhF3BMDwBFX5LGAAAAAElFTkSuQmCC&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 1 &quot; title=&quot;&quot; src=&quot;/static/bcbcea2b68311b4c3464162c1434e9f4/a6d36/react-render(1).png&quot; srcset=&quot;/static/bcbcea2b68311b4c3464162c1434e9f4/222b7/react-render(1).png 163w,
+/static/bcbcea2b68311b4c3464162c1434e9f4/ff46a/react-render(1).png 325w,
+/static/bcbcea2b68311b4c3464162c1434e9f4/a6d36/react-render(1).png 650w,
+/static/bcbcea2b68311b4c3464162c1434e9f4/394f7/react-render(1).png 707w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;우리가 흔히 사용하는 웹 브라우저(사파리, 크롬, Edge ...등) 종류에 상관없이 모든 브라우저들은 HTML, CSS로 작성한 웹 문서들을
+사용자가 보는 화면에 렌더링 시켜줍니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.852760736196316%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAYAAAC0VX7mAAAACXBIWXMAABJ0AAASdAHeZh94AAAA1klEQVR42p2S2wqEMAxEq+L9riiKbyKI//+BWU7YLq0Py7oPQ8akmSZTTRiGYhEEgcejKBJjzDMURSHjOEpZlgLP81yqqpK+7yXLMkmS5JkgQuu6Stu2Cr67rpNt2yRNU8U3ATbxcu6qJIhMhbCt3ev3nMuNewtJpjuOQ87zlGmadOphGBT7vqsVTdOoTdSu65JlWdSmt44/PivaBjyM41gj/tZ1rR6zAefg1qaPNRAO0gRHgAMIwh+/NKPyKEzFuojP86zreTf/CtdgN1pPH/+HfzR8xQv03NM8u0O58wAAAABJRU5ErkJggg==&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 2 &quot; title=&quot;&quot; src=&quot;/static/2214370aacc8548b2b1614a0a94740d3/a6d36/react-render(2).png&quot; srcset=&quot;/static/2214370aacc8548b2b1614a0a94740d3/222b7/react-render(2).png 163w,
+/static/2214370aacc8548b2b1614a0a94740d3/ff46a/react-render(2).png 325w,
+/static/2214370aacc8548b2b1614a0a94740d3/a6d36/react-render(2).png 650w,
+/static/2214370aacc8548b2b1614a0a94740d3/57dc1/react-render(2).png 718w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;HTML, CSS는 크게 위 사진과 같은 절차들을 거쳐서 브라우저 화면에 렌더링(Painting) 되게 됩니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.852760736196316%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAYAAAC0VX7mAAAACXBIWXMAABJ0AAASdAHeZh94AAABTklEQVR42q2SW2+CQBCFEURRhMhFEEm4RIVSSGNKaps2af//rzrlTLtEa9OnPhx2WGa+PTOLpmkaJpPJt3Touj6+q1jlGIYxit8uY+aImLherxEnKcLAh+95CIJwUADf9zGbzSTRsiwsl0tZbduG67pYLBayR10BwzBE1Z3QPL6hajrkWYY8z5EkiRQxkRDlhHs0odwTOLr8AgYoywJd/4Ln13dUdYOiKAToOA6m06kAqTRNxSWLoyjCarXCfD6/BrK9Y32H9vyBqj2JOwLjOMZut0PbtgI3TVPGwLmxmDC6vQUOSUVZ4v50Rt/3OFS1QLfbrcyKzginU0JUqwr2K3B/rFE/POEwrFmeIRvmSKBqj8UEbjabsZhzvGmZD9d1kKQZojgZWvJkBLwob7hxtskcFtEpZ0o4DyKMe+rQEaha+EuX/yXXy/hHvYb/1CdireDrH1NC8wAAAABJRU5ErkJggg==&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 3 &quot; title=&quot;&quot; src=&quot;/static/e02694919b12bb0dd6d0558d1d3008f0/a6d36/react-render(3).png&quot; srcset=&quot;/static/e02694919b12bb0dd6d0558d1d3008f0/222b7/react-render(3).png 163w,
+/static/e02694919b12bb0dd6d0558d1d3008f0/ff46a/react-render(3).png 325w,
+/static/e02694919b12bb0dd6d0558d1d3008f0/a6d36/react-render(3).png 650w,
+/static/e02694919b12bb0dd6d0558d1d3008f0/0ad97/react-render(3).png 717w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;브라우저는 자기가 해석하기 편한 방식으로 HTML 코드들을 DOM Tree 형태로 변환하게 되고 CSS는 CSSOM 이라는 형태로 변환됩니다.
+그렇게 생성된 DOM Tree를 바탕으로 브라우저 화면에 Layout을 잡고 Painting을 시작하게 되는 것입니다.&lt;/p&gt;
+&lt;p&gt;그렇다면 여기서 UI 업데이트는 어떻게 이루어 질까요?&lt;/p&gt;
+&lt;p&gt;예를 들어서 (사용자가 버튼을 클릭하면 모달 창이 뜸, 좋아요 버튼을 누르면 버튼 색깔이 바뀜) 이러한 상황들이 있습니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 43.558282208588956%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAAA/ElEQVR42p1Ry07EMAys7TyatiltYIVgJQ7AgZXg/z9vGC8Frbiw5TDyOHGdmWlnZgghIaeIkg1LDhgtYIkRUwjoed913fVQftyWCYc2os0RR6LFjNdp+lm6a6GZYB4Vwkakg4kgqWLgQ86V8Du7qOqzv8+I88L71fDxnPD2FLFOioX2X6aK9/kGxzJgTQmH3OMuu+qKW9bGs4e+oJGf6oxH8jXlr4VDFtRCDIocBYXqKq0uHB6ZXzZFYR1pvRLOPVevAzFvsRTbohFReI6iRpATxoHc9+devq1cnyFVUE2ijcTXHNFfpb3Axbb3L7sC3ZQ5v+z1Pwp3Dv+JTw4ku3cgCoD8AAAAAElFTkSuQmCC&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 4 &quot; title=&quot;&quot; src=&quot;/static/a3494dc25c95b52a9db10f1ed93b3e71/a6d36/react-render(4).png&quot; srcset=&quot;/static/a3494dc25c95b52a9db10f1ed93b3e71/222b7/react-render(4).png 163w,
+/static/a3494dc25c95b52a9db10f1ed93b3e71/ff46a/react-render(4).png 325w,
+/static/a3494dc25c95b52a9db10f1ed93b3e71/a6d36/react-render(4).png 650w,
+/static/a3494dc25c95b52a9db10f1ed93b3e71/6bbf7/react-render(4).png 716w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;위에서 말했던 UI 업데이트들은 JavaScript가 DOM을 수정하게 되면서 발생하게 됩니다.&lt;/p&gt;
+&lt;p&gt;JavaScript의 innerHTML, appendChild, removeChild와 같은 API를 사용하여 DOM을 수정하게 되면
+브라우저가 DOM의 변경을 감지하게 되어 Render Tree를 다시 만들고 Layout과 Painting 과정을 다시 반복하게 됩니다.&lt;/p&gt;
+&lt;p&gt;여기에서 중요한 것은 Layout을 잡고 Painting을 하는 과정은 브라우저에게 매우 부담이 되고 비싼 과정입니다.
+그만큼 연산이 많이 필요하고 시간이 오래 걸리는 과정이죠.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 46.62576687116564%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAABCUlEQVR42q1Sa0/DMAxM4iR9hKasa7VHB2hC+/8/8TinnRioICHx4XRJZJ/PdowxBsZaVMFhyIIgFt45iF3Yk0sMYX+AeYRjQtM2uBx7XOca1yliHyvcug6nusYuxi9iZgPf3g2iF+TkeVFXFpHOuhAKB+IenLzHuWlwZKGZrDjVDZz57MKIMziPgssk2HVLi3u60uCR/EQRRUdMVYWBbz2L6V3jVFxZi2m3RfDt4HGbAw4DZ2hdEXvPGS9ti2cm36H3kaIqmAkVem1TcZ0pKMu8H2dgy1kricgyt3UpdmNem2dNqFg1pYSgc2NVRU+HuizxfnMRv4CO9JvQkbJd3XltYX37s+B/4gNrDbyAGZJ57AAAAABJRU5ErkJggg==&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 5 &quot; title=&quot;&quot; src=&quot;/static/e169b609851587035c18433a33c3bfb0/a6d36/react-render(5).png&quot; srcset=&quot;/static/e169b609851587035c18433a33c3bfb0/222b7/react-render(5).png 163w,
+/static/e169b609851587035c18433a33c3bfb0/ff46a/react-render(5).png 325w,
+/static/e169b609851587035c18433a33c3bfb0/a6d36/react-render(5).png 650w,
+/static/e169b609851587035c18433a33c3bfb0/a8e5b/react-render(5).png 711w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;결국 JavaScript로 DOM의 조작 횟수를 최소화 하는 것이 브라우저 성능을 끌어올리는데에 매우 중요한 부분이라고 볼 수 있습니다.
+예를 들어서 UI 업데이트가 300개가 필요하다면 300번의 DOM을 수정하고 Layout과 Painting 과정이 300번 일어나게 되므로
+심각한 웹 페이지의 성능 저하를 일으키게 되면서 홈페이지가 느려지는 원인이 될 수 있습니다.&lt;/p&gt;
+&lt;h2&gt;예제코드&lt;/h2&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 602px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 70.5521472392638%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAOCAYAAAAvxDzwAAAACXBIWXMAABJ0AAASdAHeZh94AAACiklEQVR42oWT646bMBCF8ya71ebCPWAwxoDBECAJCdlLut2qldr3f4rTMbtSt1Kk/jiawXg+j4/thR0LuFKDnV/B9Al5/YxcvyDiBbrLC47fvqN/vIIPFeSlhpz0u441ilrhcKkwnCsIWcJmGRY2E3AMcHpDVI+IxYCyOaB/+oqnn79QjWcUTy3BNMUG2VQj72qUZoGyRCAkvFTAcDZRSsA4g8Nz+JmaV7ASDk9Q11kOlyY7lHtZBpcLBCaaYip0CWC0CVOstukMm4EWDSZ1i9PbD+xfXtFc9yivGorE+wLpWFEskWQCzaEArwtsuUSaSrBEYksLrMNPQIcGVyGHagby4xHV6Rlx30CNCqnS2FDXTkQQssJmtJM4h0fdrql4Hf0F/QM0P1KaWKoa6fGCfH9B001Q3QWRKKDqHtP1N8r9Ebu+xe5Qwk2y20DjoWU8Ia8iRaa3A1Q/QnYjIvLVJ3/CQoA3CeK2BqtypBV5S8DNLaBLB2K2LHcd1DAi1QM8ArA+nz2MCollQMaTlkFC4rPWVHMTaNOWfbqLomyQ6A686uDnOba6QEidhFKSjwJWbJR9RBK7rYWblqhzDpEwrN0AK9uFE0Rw/BB+GOPBcnC/XON+9SHK7x5W+PKR3y/f87uH5ayFaTNvCgx0sk1LF5g6ahoNTbluWrCYwXZsBEEA3/dnMcbgeR622y3CMJxzMy+KIgMk/wqF43FES5CqoldAL6AdLtD9RIs0GIYBfd/P/3e7Hc7nMy1qxvdUd4DWGtM04XQaCUjm8kxCKYWEXglj8dyBzCUEnXxOfnZdN3fOOacLndK8ZI7m+/OYyeeXsrLsuXUzYLZmJsRxPANNdBwHm80GlmX9V38AUXDKuRQWHHQAAAAASUVORK5CYII=&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render code 1 &quot; title=&quot;&quot; src=&quot;/static/8864755748297f5b8345b55758b7fb2d/32056/react-render-code(1).png&quot; srcset=&quot;/static/8864755748297f5b8345b55758b7fb2d/222b7/react-render-code(1).png 163w,
+/static/8864755748297f5b8345b55758b7fb2d/ff46a/react-render-code(1).png 325w,
+/static/8864755748297f5b8345b55758b7fb2d/32056/react-render-code(1).png 602w&quot; sizes=&quot;(max-width: 602px) 100vw, 602px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;위 코드는 버튼을 눌렀을 때 ul 태그 안에 3000개의 li 태그들을 렌더링 하는 코드입니다.
+3000번의 innerHTML을 실행하여 3000번의 Layout, Painting 과정이 일어납니다.&lt;/p&gt;
+&lt;p&gt;총 4.5초가 걸렸습니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 616px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 85.2760736196319%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAARCAYAAADdRIy+AAAACXBIWXMAABJ0AAASdAHeZh94AAAC3ElEQVR42o1U23LiRhTkT7LZNTACJMFIM7pfRhfEgsF24di7SSr//xedHslLOeVNKg+nupkZerp1jjQTUmMdlwjPr5DNCYV5RmYeEJcdDtffcPz2Hd3jI5JzjfyJ9WiQXWok+wpVU+JwKVD3BaTOsNhpzJwghtA5vO4MN+8hVQudGTSXJ3SXK+K2RzgUUF956YE1lAiKHFmdQ0YZljQkdgpLitmaCQq63AgKAz8psEkj+HlC1zHWSQyvTOBnKVwVQxUJXM11GcENbNGM1DexSZCbflpi//SM4/UV5cMB+bNB/cJodBXsC+i2QJhmqAa6yjPsogSBShDqBKtAj1FvgqswwZ0rsa0HmKcXnF//hDY14r7Cls6/rEPMPYW5r/DZndAKzLdqrPfu3gRpm0REJZ8lndQtvDDFwp3+uBwjWa5u8RZb/UHoH4JzHowpEjOCb/ZsTosgKrBLOvh0GSY9TPcHfxsUeQmZxowa/VR4jGzJhtg/XNGcHxGqqYvNPQUeBhQckfbQwo9zClEs1B+acRPccH4s2bKjgrcueeudF0wRAz4jOUUVUt3i/mfktUpHYqNbt07A2ElFxxxUX8Pj0NtZ/TeBjw75jOZeiLg78M14xeX3v3B4eeHbcUTWGZy/f+MFJV2p/yfo0JWd9KhqkR/ukXYnuBzggDOn9jl2bMDU7Wgs8VbLd/iez2RWo4oVdjuJu5WLL2IF4e4gNlN9mgv8uhD4tJjwl/lyrB983Htbszizr1vTxWg4zEVZQkcRqrpCWZVIswyO40AIgdV6PaLruliTO6vVyAX3N0TX3Yw4W9FmbRrs9wOqqkLTNMiLEt3xirLu0fcd2rbFMAzjRaf7E8/uYXju/nTiWo0j8XQ84nQ+U5CjUhQF8jxHEATQWkPKgOKG86hhjBkFVcjG0b1WajwTsRR5FOlxzXKLM8fOGG3bBSnlGMfyhF8bi57nYbFY3KL/wJ+V4wj8Df2oKLKYbTuaAAAAAElFTkSuQmCC&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render code 2 &quot; title=&quot;&quot; src=&quot;/static/040fbba83bc819cc983962682462c8d5/40040/react-render-code(2).png&quot; srcset=&quot;/static/040fbba83bc819cc983962682462c8d5/222b7/react-render-code(2).png 163w,
+/static/040fbba83bc819cc983962682462c8d5/ff46a/react-render-code(2).png 325w,
+/static/040fbba83bc819cc983962682462c8d5/40040/react-render-code(2).png 616w&quot; sizes=&quot;(max-width: 616px) 100vw, 616px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;위 코드는 3000개의 li 태그들을 html String 형태로 만들어 준 후 마지막 1번의 innerHTML을 실행하여
+1번의 Layout, Painting 과정이 일어납니다.&lt;/p&gt;
+&lt;p&gt;총 0.013초가 걸렸습니다.&lt;/p&gt;
+&lt;p&gt;이처럼 개발자는 JavaScript로 DOM을 업데이트를 해야 될때에는 업데이트 될 것들을 다 모아서 DOM 수정 횟수를
+최소한으로 가져가는 방식으로 개발을 해야합니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.239263803680984%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAABSElEQVR42oVSu27CQBC8s/Gd3+cXsejSIBFIS+fGVIggBIU/KJ+R3+Ij+AQKmsmubYiRAhRjn/Zm52ZHK4QQeIRgNEJEMNpB7DgwBEtKPOsR/GFS2jdcGxkJYRbHmLkxPiKDN1ffcfifKQVlWfeCDhX4ks+yh23bsMmdS/V6WSI3GkLaUMqBTXw5mMIn7rX3JsijDYp/IJGf7yU+3zW6acQdj8W8XvDmUHFWNI7srWutMZ1OcTgcsNl8wQ9CGGOw3W6x2+1QFEXnLgyRUyQZwfN9yC5fgTTLMJlM2qYsz+HTZdM0OJ1OOB6PmM/nqOsa5/MZl8sF+/0eOfGSJEFZlu05iiKKQ3WCQ1jk0qHcFotF67CqKriui5DcrFYrrNdrxOSI3Xie1z7OYM7N4X9I0xTj8RhBEHSZEZmFeIqXa/MMcrB38vUO4hdv99RwgIUv9QAAAABJRU5ErkJggg==&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 7 &quot; title=&quot;&quot; src=&quot;/static/5b040f9f67f455a17bb3889d271a795b/a6d36/react-render(7).png&quot; srcset=&quot;/static/5b040f9f67f455a17bb3889d271a795b/222b7/react-render(7).png 163w,
+/static/5b040f9f67f455a17bb3889d271a795b/ff46a/react-render(7).png 325w,
+/static/5b040f9f67f455a17bb3889d271a795b/a6d36/react-render(7).png 650w,
+/static/5b040f9f67f455a17bb3889d271a795b/a8e5b/react-render(7).png 711w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;하지만 서비스의 규모가 커질 수록 코드는 점점 더 복잡해지기 때문에 이러한 부분들을 하나하나 개발자가 신경써서 개발을 해야되는 것은
+매우 힘들 수밖에 없습니다.&lt;/p&gt;
+&lt;p&gt;순수한 자바스크립트의 힘만으로는 복잡하고 규모가 큰 서비스의 모든 업데이트들을 좋은 성능으로 처리하는 것은
+굉장히 어려운 일입니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 48.46625766871166%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAYAAAC0VX7mAAAACXBIWXMAABJ0AAASdAHeZh94AAABXUlEQVR42q2SuW7CQBCGd/bg8gnG2MQRIQVJYx4ibV4mSCCl4DEoKWipqENPzyP92VkbIbBIleLXaHdmvjl2hRACDyUlBBGEUpX+ir1KgNo9kB+DeiEky2MbQCVPMNMS5nUOnb2Aur71Rc4n61jOcUVvgH4fotUFSQ1SxnZjKisVdDJ2YIbxmVTL+ZwlCRkMQNrcAqUFktK3rddV1fsc5uOzMRqJys8dk27ddWgvRQ0kC9JaQ9r9EQNHY8jpWxPIcdIqHEC3u1CyHtvzPKRZjrjfR6fTQRRFmEwm2G63+Dke8b1aucD1eo3z+Yz9fo88z5GmKcIgQF4829yByyN+RIaEYQgGG2Pg+z6KosBms8HhcMDXYuGAy+USp9MJu90Ow+EQSZIgsMAsGyGOI8egak3Np+fgsiwxm81cEb7jwnxm2P1qlP1S6vqtmkCGcMcsujyOTbhMcQE+/If/qV8cHOoL4oqAkgAAAABJRU5ErkJggg==&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 8 &quot; title=&quot;&quot; src=&quot;/static/c8acf6b97e7506bb83cdcc0ab28b9324/a6d36/react-render(8).png&quot; srcset=&quot;/static/c8acf6b97e7506bb83cdcc0ab28b9324/222b7/react-render(8).png 163w,
+/static/c8acf6b97e7506bb83cdcc0ab28b9324/ff46a/react-render(8).png 325w,
+/static/c8acf6b97e7506bb83cdcc0ab28b9324/a6d36/react-render(8).png 650w,
+/static/c8acf6b97e7506bb83cdcc0ab28b9324/d2cbc/react-render(8).png 705w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;하지만 리액트는 별도의 렌더링 프로세스를 사용하기 떄문에 내부적으로 개발자가 딱히 신경쓰지 않아도 동시에 발생된 업데이트들을 모두 모아서
+최소한의 횟수로 DOM을 수정할 수 있도록 해줍니다.&lt;/p&gt;
+&lt;h2&gt;React.js의 렌더링 프로세스&lt;/h2&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 46.012269938650306%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAABR0lEQVR42p2SWWvDMBCEfcTxEUgIvi/Zku+6OeyWXND//7OmkkpKoKQPeVjWLNpPMyMriqLAtB0sea1WDhzHxHJpQMxFqar6+32vMPBQdT0YLUHyDHGSIE1TmKYJReMLdTvgcLximibsxxoFyaBq2h/QvQRgun6h381gVYWiKEAphW3bUHRdR5HnaPsR0+mG08wPUQbLsrDdbrHZbOB5HtbrNWzHkbMoirD7vGD3fkDFKAgHlmX5A9S4EkFvu4Er7UAZQ5blWCx0iMsMw5Bw0cVZMQuDAMP+iPl8wziO3NEDUFjLs4RDUkRxJLMIw1AuP7Mc+D4anuHbfEbDnQnLQqUEPlv6r3weAatqjB8XNIMAElCu0LJeBHqezy0S1F0L1vYS1vAsXwa6roeipEiSWD5QHMfy5eVv85JC1wUhRGYuYKInvAvgN3KO01vle4Z/AAAAAElFTkSuQmCC&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 9 &quot; title=&quot;&quot; src=&quot;/static/f7d58d6ff4b91d7789d533a8add8be4f/a6d36/react-render(9).png&quot; srcset=&quot;/static/f7d58d6ff4b91d7789d533a8add8be4f/222b7/react-render(9).png 163w,
+/static/f7d58d6ff4b91d7789d533a8add8be4f/ff46a/react-render(9).png 325w,
+/static/f7d58d6ff4b91d7789d533a8add8be4f/a6d36/react-render(9).png 650w,
+/static/f7d58d6ff4b91d7789d533a8add8be4f/3d4b6/react-render(9).png 712w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;만약 개발자가 위와 같은 컴포넌트를 작성하게 되면 리액트는 해당 컴포넌트가 렌더링 하고자 하는 UI의 모든 정보들을
+객체의 형태로 추상화 합니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.239263803680984%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAABE0lEQVR42o2S60rEMBBGU3q/l6R1sfe0olGRFVTE93+wz0ygxbpZ9McwZWjPnH4JY4yBynEcxHGMNE3h+z62+bWKogh5ntveZUiSGEJwdG2Lvu9RFIVZYANt8yzLUNc1PM+7BN52Hc4fX5jnGcMwYBxH08uyvGoYhqExtCxmuDmdcH7/hFKPBialxLquuwF9HATB3jnn+q8SA6Nnmh2AtRB4en2Den7BNA6YpknbSh2D0FmFJlcCUCern2Y0vwBSfvdK4e5BYZknrNpwkdLMbRlWVbUDaQmZH4BN05j82k4fis6T8lvkDMHtQDLagK7rmjoAiyLXkN6cMMGo97qTyV/Xx1Js30TqlEkSJ+ZO/uc+/q5vScTHUCwDXOoAAAAASUVORK5CYII=&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 10 &quot; title=&quot;&quot; src=&quot;/static/61ff4c23565c28294f025b96bb755720/a6d36/react-render(10).png&quot; srcset=&quot;/static/61ff4c23565c28294f025b96bb755720/222b7/react-render(10).png 163w,
+/static/61ff4c23565c28294f025b96bb755720/ff46a/react-render(10).png 325w,
+/static/61ff4c23565c28294f025b96bb755720/a6d36/react-render(10).png 650w,
+/static/61ff4c23565c28294f025b96bb755720/d6331/react-render(10).png 702w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;이렇게 개발자가 작성한 모든 컴포넌트들의 UI 정보가 담긴 객체들을 모아서 가상돔(Virtural DOM)이라는
+트리 형태로 구조화를 시킵니다.&lt;/p&gt;
+&lt;p&gt;여기에서 가상돔(Virtural DOM)은 실제 돔이 아닌 리액트가 내부적으로 만든 객체들의 모임이라고 생각하면 됩니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 47.239263803680984%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAJCAYAAAAywQxIAAAACXBIWXMAABJ0AAASdAHeZh94AAABgElEQVR42q1SyXbjIBAktjZbQgtCElqtDdlWHMf//3M1DXkvM3PLIYd60N10UV3A0jRFzDmiKMLhcABj7BtHnsFXE9yiA3t7+69mcA4c8CgEp/4gCL7ypVKomgZFpRCnGc4RR2guiGNCgrDqEQr5N7a1BJ7vg4cnNO1Xb16UCE4nsDTPMWqNbppQth222x2aoPoBahihH58YtxuEaqCoPm9XrNcbkXIiDew5kxsXDZ6kYEIW2O4PLOsKSTfp+zvmZYGsG0gimVcN1Q0QVYOc6pdlRT/NOIcRfBqzbFrsH09042SVM5FL3IhEk8qqbbHtH0Ru9h00NdddZ0mMwmGeiby3cUL2uJ6P988XalL5eL2QihwsyYT10KgT5EN/uaAfjCKF5TLSIYGWVlm36ElFXlVE0COjvOt52J9PJGTbtu8QUoLF9MqGKKPRs6KwexsT8lJZiKpGVlbfNTO6HZk8NEJMr1l5QiM7rksF38L7Kci74/Fov9m/ecdxzNdh+E38AbWH2KixAWwSAAAAAElFTkSuQmCC&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 11 &quot; title=&quot;&quot; src=&quot;/static/dd7df8d1c131ab343b51f20ef75fe0c7/a6d36/react-render(11).png&quot; srcset=&quot;/static/dd7df8d1c131ab343b51f20ef75fe0c7/222b7/react-render(11).png 163w,
+/static/dd7df8d1c131ab343b51f20ef75fe0c7/ff46a/react-render(11).png 325w,
+/static/dd7df8d1c131ab343b51f20ef75fe0c7/a6d36/react-render(11).png 650w,
+/static/dd7df8d1c131ab343b51f20ef75fe0c7/394f7/react-render(11).png 707w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;사용자의 이벤트에 의해서 업데이트가 발생하게 되면 리액트는 내부적으로 다시 컴포넌트들을 모아서 또 다른 가상돔(Virtural DOM)을 만들게 되고
+전에 만들었던 가상돔과 비교하여 어떠한 부분들이 바뀌었는지 찾아냅니다.&lt;/p&gt;
+&lt;p&gt;그 후에 실제 돔에 접근하여 바뀐 부분들을 업데이트하게 됩니다.&lt;/p&gt;
+&lt;span class=&quot;gatsby-resp-image-wrapper&quot; style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 650px; &quot;&gt;
+      &lt;span class=&quot;gatsby-resp-image-background-image&quot; style=&quot;padding-bottom: 50.920245398773%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAYAAAC0VX7mAAAACXBIWXMAABJ0AAASdAHeZh94AAABPUlEQVR42q2SuVLDQBBEJa32klY+ZMAqQxUuTMoVEFFFyAcQ8gWk/H/QdK9PDEQQdM1qjrczsyqKosCxyrKEMSarqir8lCMp9i1Pxc451HWdZa1FCAGpbbPKyuH5cY6XpwULSnjvMkB1MXo0TYOWeaqRLwP1Iaj3PltBa1oXPCEG768DPt7OeeZlTUTNuKDKPZR8O2BKCd1oBEdoZHDRdbjsEoYY0BuL3nqeI+a8ZMGu4uZidRfp/wKMAhIwIjAoyEBnHaazAd3kFDPaaX/G+AzjfsCYIMf1CKSRJTWV97jtUEHJO46bJjDzJerVPez1A2rKXt3CLm9o71CdXOScliBNpHp1ugNqd2p/qzx2m9YXaK/0eaf9+nWuCzDybXa+3f9u5PwIm1fey+zPh3Ge1Yl0XJNf+bd/7A/6X+AnTy7XTUaEdN8AAAAASUVORK5CYII=&apos;); background-size: cover; display: block;&quot;&gt;&lt;/span&gt;
+  &lt;img class=&quot;gatsby-resp-image-image&quot; alt=&quot;react render 12 &quot; title=&quot;&quot; src=&quot;/static/ea62b74f7ecc5bd9a6150adca80415a9/a6d36/react-render(12).png&quot; srcset=&quot;/static/ea62b74f7ecc5bd9a6150adca80415a9/222b7/react-render(12).png 163w,
+/static/ea62b74f7ecc5bd9a6150adca80415a9/ff46a/react-render(12).png 325w,
+/static/ea62b74f7ecc5bd9a6150adca80415a9/a6d36/react-render(12).png 650w,
+/static/ea62b74f7ecc5bd9a6150adca80415a9/242e2/react-render(12).png 703w&quot; sizes=&quot;(max-width: 650px) 100vw, 650px&quot; style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
+    &lt;/span&gt;
+&lt;br&gt;
+&lt;p&gt;리액트는 왜 이렇게 복잡한 렌더링 프로세스를 선택했던 걸까? 를 생각해보면&lt;/p&gt;
+&lt;p&gt;결국 DOM 수정 횟수를 최소화하여 대부분의 상황에서 빠른 화면 업데이트와 브라우저 성능을 좋게 가져가기 위함이라고 볼 수 있습니다.&lt;/p&gt;
+&lt;h2&gt;총 정리&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;바닐라 자바스크립트를 이용해서 DOM을 조작할 때에는 DOM 수정을 최소화 해야함.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;DOM 수정으로 인한 Layout, Painting 과정을 최소한으로 발생시키기 위함.&lt;/li&gt;
+&lt;li&gt;동시에 발생하는 업데이트를 최대한 모아 한번만 DOM을 수정해야 함.&lt;/li&gt;
+&lt;li&gt;작은 규모의 서비스는 가능하겠지만 서비스의 규모가 커질수록 쉽지 않음.
+&lt;/br&gt;
+&lt;/br&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;리액트는 자체적인 렌더링 프로세스를 사용하므로 위와 같은 걱정에서 자유롭다.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;가상돔(Virtural DOM) 개념을 도입하여 동시에 발생하는 업데이트를 모음.&lt;/li&gt;
+&lt;li&gt;가상돔(Virtural DOM)에 반영된 모든 업데이트를 실제 돔에 한번만 반영함.
+&lt;/br&gt;
+&lt;/br&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;레퍼런스&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://youtu.be/N7qlk_GQRJU&quot; target=&quot;_blank&quot;&gt;👉🏻 [React.js의 렌더링 방식 살펴보기 - 이정환 | 2023 NE(O)RDINARY CONFERENCE]&lt;/a&gt;&lt;/p&gt;
+&lt;style class=&quot;grvsc-styles&quot;&gt;
+  .grvsc-container {
+    overflow: auto;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+    padding-top: 1rem;
+    padding-top: var(--grvsc-padding-top, var(--grvsc-padding-v, 1rem));
+    padding-bottom: 1rem;
+    padding-bottom: var(--grvsc-padding-bottom, var(--grvsc-padding-v, 1rem));
+    border-radius: 8px;
+    border-radius: var(--grvsc-border-radius, 8px);
+    font-feature-settings: normal;
+    line-height: 1.4;
+  }
+  
+  .grvsc-code {
+    display: table;
+  }
+  
+  .grvsc-line {
+    display: table-row;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+  }
+  
+  .grvsc-line &gt; * {
+    position: relative;
+  }
+  
+  .grvsc-gutter-pad {
+    display: table-cell;
+    padding-left: 0.75rem;
+    padding-left: calc(var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem)) / 2);
+  }
+  
+  .grvsc-gutter {
+    display: table-cell;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  .grvsc-gutter::before {
+    content: attr(data-content);
+  }
+  
+  .grvsc-source {
+    display: table-cell;
+    padding-left: 1.5rem;
+    padding-left: var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem));
+    padding-right: 1.5rem;
+    padding-right: var(--grvsc-padding-right, var(--grvsc-padding-h, 1.5rem));
+  }
+  
+  .grvsc-source:empty::after {
+    content: &apos; &apos;;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  .grvsc-gutter + .grvsc-source {
+    padding-left: 0.75rem;
+    padding-left: calc(var(--grvsc-padding-left, var(--grvsc-padding-h, 1.5rem)) / 2);
+  }
+  
+  /* Line transformer styles */
+  
+  .grvsc-has-line-highlighting &gt; .grvsc-code &gt; .grvsc-line::before {
+    content: &apos; &apos;;
+    position: absolute;
+    width: 100%;
+  }
+  
+  .grvsc-line-diff-add::before {
+    background-color: var(--grvsc-line-diff-add-background-color, rgba(0, 255, 60, 0.2));
+  }
+  
+  .grvsc-line-diff-del::before {
+    background-color: var(--grvsc-line-diff-del-background-color, rgba(255, 0, 20, 0.2));
+  }
+  
+  .grvsc-line-number {
+    padding: 0 2px;
+    text-align: right;
+    opacity: 0.7;
+  }
+  
+&lt;/style&gt;</content:encoded></item></channel></rss>
