@@ -1,8 +1,8 @@
 ---
-title: "parser-storages 구현"
+title: "parser-storages"
 category: "lib"
 date: "2024-03-06"
-desc: "간단히 만들어 본 Storages"
+desc: "웹 브라우저 저장소 localStorage의 문제점을 보완"
 thumbnail: "./images/parser-storages/thum.png"
 alt: "apple big sur gradient"
 ---
@@ -19,45 +19,21 @@ localStorage의 특징중 하나는 항상 문자 형태로 값을 저장해야 
 
 ### 기존 localStorage와 parser-storages의 차이점
 
-```jsx
-import { parserLocalStorage } from "parser-storages"
+<img src='./images/parser-storages/local-storage-example.png' width='700px'>
 
-// localStorage를 이용하여 [1,2,3,4,5] 라는 배열을 저장하는 코드
-localStorage.setItem("test", JSON.stringify([1, 2, 3, 4, 5]))
-console.log(JSON.parse(localStorage.getItem("test")))
-
-// parserLocalStorage 라이브러리를 사용하여 [1,2,3,4,5] 라는 배열을 저장하는 코드
-parserLocalStorage.set("test", [1, 2, 3, 4, 5])
-console.log(parserLocalStorage.get("test"))
-```
-
-<img src='./images/parser-storages/console.png'>
+<br/>
 
 위 코드에서 처럼 따로 JSON 객체를 사용하지 않아도 라이브러리가 자동으로 파싱 해주어 코드가 좀 더 간결해졌습니다.
 
-```js
-localStorage.setItem("test", 123)
-localStorage.setItem("test2", true)
+<img src='./images/parser-storages/local-storage-example2.png'>
 
-console.log(localStorage.getItem("test"))
-console.log(localStorage.getItem("test2"))
-```
-
-<img src='./images/parser-storages/console3.png'>
+<br/>
 
 위 코드를 보시면 개발자는 분명히 숫자 123과 불리언 값 true를 저장하였지만 값을 가져와보니 문자 타입으로 변환되어 리턴되는 것을 볼 수 있습니다.
 
-```js
-import { parserLocalStorage } from "parser-storages"
+<img src='./images/parser-storages/local-storage-example3.png'>
 
-parserLocalStorage.setItem("test", 123)
-parserLocalStorage.setItem("test2", true)
-
-console.log(parserLocalStorage.getItem("test"))
-console.log(parserLocalStorage.getItem("test2"))
-```
-
-<img src='./images/parser-storages/console2.png'>
+<br/>
 
 parser-storages 라이브러리를 사용하여 값을 저장하고 값을 가져온 결과입니다.
 
@@ -70,6 +46,8 @@ localStorage.setItem("foo", "bar")
 ```
 
 <img src='./images/parser-storages/next_console.png'/>
+
+<br/>
 
 Next.js 환경에서 localStorage 객체에 접근할시에 위와 같은 에러가 발생되게 됩니다.
 
