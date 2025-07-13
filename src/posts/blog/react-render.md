@@ -1,7 +1,7 @@
 ---
 title: "React.js의 렌더링 방식"
 category: "react"
-date: "2024-10-11"
+date: "2025-05-11"
 desc: "리액트를 쓰는 이유와 렌더링 방식"
 thumbnail: "./images/react-render/react-thum.png"
 alt: "apple big sur gradient"
@@ -122,7 +122,6 @@ JavaScript의 innerHTML, appendChild, removeChild와 같은 API를 사용하여 
 ## 총 정리
 
 - 바닐라 자바스크립트를 이용해서 DOM을 조작할 때에는 DOM 수정을 최소화 해야함.
-
   - DOM 수정으로 인한 Layout, Painting 과정을 최소한으로 발생시키기 위함.
   - 동시에 발생하는 업데이트를 최대한 모아 한번만 DOM을 수정해야 함.
   - 작은 규모의 서비스는 가능하겠지만 서비스의 규모가 커질수록 쉽지 않음.

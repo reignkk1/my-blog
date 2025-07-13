@@ -82,7 +82,6 @@ const markdownPlugins = [
                 "body[data-theme=dark]": "Dark Github",
               },
             },
-            extensions: ["vscode-theme-github-light", "dark-github-theme"],
           },
         },
         {
